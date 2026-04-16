@@ -217,10 +217,24 @@ const BRAND_DARK = '#5f000d';
 const GOLD = '#c9a227';
 
 const map = L.map('map', { zoomControl: true, minZoom: 2 }).setView([24, 15], 2);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-  maxZoom: 18
-}).addTo(map);
+
+const baseLayers = {
+  light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    maxZoom: 18
+  }),
+  dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    maxZoom: 18
+  }),
+  osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  })
+};
+
+let currentBaseLayer = baseLayers.light;
+currentBaseLayer.addTo(map);
 
 let pipelinesRaw = null;
 let pointsRaw = null;
@@ -238,6 +252,7 @@ const ui = {
   pointCount: document.getElementById('pointCount'),
   applyBtn: document.getElementById('applyBtn'),
   resetBtn: document.getElementById('resetBtn')
+  basemapSelect: document.getElementById('basemapSelect'),
 };
 
 function stylePipeline(feature){
