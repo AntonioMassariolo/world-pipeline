@@ -251,7 +251,7 @@ const ui = {
   pipelineCount: document.getElementById('pipelineCount'),
   pointCount: document.getElementById('pointCount'),
   applyBtn: document.getElementById('applyBtn'),
-  resetBtn: document.getElementById('resetBtn')
+  resetBtn: document.getElementById('resetBtn'),
   basemapSelect: document.getElementById('basemapSelect'),
 };
 
@@ -517,6 +517,7 @@ ui.toggleExtraction.addEventListener('change', renderLayers);
   currentBaseLayer = baseLayers[ui.basemapSelect.value];
   currentBaseLayer.addTo(map);
 });
+  
 </script>
 </body>
 </html>
