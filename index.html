@@ -29,23 +29,34 @@
       overflow:hidden;
     }
     #app {
-      display:grid;
-      grid-template-columns: 360px 1fr;
+      display:flex;
       height:100vh;
       width:100%;
+      min-height:0;
     }
     #sidebar {
+      width:430px;
+      min-width:430px;
+      max-width:430px;
       overflow-y:auto;
       overflow-x:hidden;
       background:var(--card);
       border-right:1px solid var(--line);
       padding:18px 16px 24px;
       box-sizing:border-box;
+    }
+    #map-wrap{
+      position:relative;
+      flex:1 1 auto;
+      min-width:0;
       min-height:0;
+      background:#eef1f2;
     }
     #map {
+      position:absolute;
+      inset:0;
       width:100%;
-      height:100vh;
+      height:100%;
       min-height:0;
     }
     h1 { font-size: 24px; line-height:1.1; margin:0 0 8px; color:var(--brand); }
@@ -117,412 +128,26 @@
     @media (max-width: 960px){
       html, body { overflow:auto; }
       #app {
-        grid-template-columns: 1fr;
-        grid-template-rows: 430px auto;
+        display:block;
         height:auto;
       }
       #sidebar {
-        order:2;
+        width:100%;
+        min-width:0;
+        max-width:none;
         border-right:0;
-        border-top:1px solid var(--line);
+        border-bottom:1px solid var(--line);
         overflow:visible;
       }
-      #map { order:1; height:430px; }
-    }
-  </style>
-</head>
-<body>
-<div id="app">
-  <aside id="sidebar">
-    <h1>Oleodotti e siti di estrazione</h1>
-    <p class="intro">Mappa globale con due layer principali: <strong>pipeline di petrolio/NGL</strong> e <strong>siti di estrazione</strong>.</p>
-
-    <div class="section">
-      <h2>Asset visibili</h2>
-      <div class="stat-grid">
-        <div class="stat-card"><b id="pipelineCount">0</b><span>pipeline</span></div>
-        <div class="stat-card"><b id="pointCount">0</b><span>siti di estrazione</span></div>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Layer</h2>
-      <div class="toggle-group">
-        <label class="toggle-card"><input type="checkbox" id="togglePipelines" checked> Pipeline</label>
-        <label class="toggle-card"><input type="checkbox" id="toggleExtraction" checked> Siti di estrazione</label>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Filtri</h2>
-      <div class="control-row">
-        <label for="fuelFilter">Tipo</label>
-        <select id="fuelFilter">
-          <option value="all">Tutti</option>
-          <option value="oil">Oil</option>
-          <option value="ngl">NGL / LPG</option>
-          <option value="oil_ngl">Oil + NGL</option>
-          <option value="gas">Gas</option>
-          <option value="oil_gas">Oil + Gas</option>
-          <option value="gas_condensate">Gas + condensate</option>
-        </select>
-      </div>
-      <div class="control-row">
-        <label for="statusFilter">Stato</label>
-        <select id="statusFilter">
-          <option value="all">Tutti</option>
-          <option value="operating">Operating</option>
-          <option value="construction">Construction</option>
-          <option value="proposed">Proposed</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="retired">Retired</option>
-          <option value="idle">Idle</option>
-          <option value="mothballed">Mothballed</option>
-          <option value="shelved">Shelved</option>
-          <option value="in_development">In development</option>
-          <option value="discovered">Discovered</option>
-          <option value="abandoned">Abandoned</option>
-        </select>
-      </div>
-      <div class="control-row">
-        <label for="countrySearch">Paese</label>
-        <input type="text" id="countrySearch" placeholder="Es. Italy, Kazakhstan, Iraq">
-      </div>
-      <div class="control-row">
-        <label><input type="checkbox" id="italianOnly"> Solo asset con aziende italiane / operatori italiani</label>
-      </div>
-      <div class="control-row">
-        <button id="applyBtn">Applica filtri</button>
-        <button class="secondary" id="resetBtn">Reset</button>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Lettura cromatica</h2>
-      <div class="legend">
-        <div class="legend-item"><span class="line-swatch" style="border-top-color:#900014"></span> pipeline operative</div>
-        <div class="legend-item"><span class="line-swatch" style="border-top-color:#c45a69"></span> pipeline in costruzione / proposte</div>
-        <div class="legend-item"><span class="line-swatch" style="border-top-color:#d5a2ab; border-top-style:dashed;"></span> pipeline cancellate o ferme</div>
-        <div class="legend-item"><span class="swatch" style="background:#900014"></span> estrazione oil</div>
-        <div class="legend-item"><span class="swatch" style="background:#c45a69"></span> estrazione gas / mix</div>
-        <div class="legend-item"><span class="swatch" style="background:#900014; border-color:#c9a227; box-shadow:0 0 0 2px rgba(201,162,39,.25) inset;"></span> presenza italiana</div>
-      </div>
-    </div>
-
-    <div class="footer-note">
-      <div class="meta-actions">
-        <button type="button" class="meta-btn" data-modal="embed">Embed</button>
-        <button type="button" class="meta-btn" data-modal="method">Nota metodologica</button>
-        <button type="button" class="meta-btn" data-modal="credits">Credits</button>
-      </div>
-    </div>    </div>
-  </aside>
-
-  <div id="map"></div>
-</div>
-
-<div class="modal-overlay" id="modalOverlay" aria-hidden="true">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal-top">
-      <h2 class="modal-title" id="modalTitle">Dettagli</h2>
-      <button type="button" class="modal-close" id="modalClose">Chiudi</button>
-    </div>
-    <div class="modal-body" id="modalBody"></div>
-  </div>
-</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script>
-const BRAND = '#900014';
-const BRAND_SOFT = '#c45a69';
-const BRAND_PALE = '#d5a2ab';
-const BRAND_DARK = '#5f000d';
-const GOLD = '#c9a227';
-
-const map = L.map('map', { zoomControl: true, minZoom: 2 }).setView([24, 15], 2);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-  maxZoom: 18
-}).addTo(map);
-
-let pipelinesRaw = null;
-let pointsRaw = null;
-let pipelineLayer = null;
-let pointLayer = null;
-
-const ui = {
-  togglePipelines: document.getElementById('togglePipelines'),
-  toggleExtraction: document.getElementById('toggleExtraction'),
-  fuelFilter: document.getElementById('fuelFilter'),
-  statusFilter: document.getElementById('statusFilter'),
-  countrySearch: document.getElementById('countrySearch'),
-  italianOnly: document.getElementById('italianOnly'),
-  pipelineCount: document.getElementById('pipelineCount'),
-  pointCount: document.getElementById('pointCount'),
-  applyBtn: document.getElementById('applyBtn'),
-  resetBtn: document.getElementById('resetBtn')
-};
-
-function stylePipeline(feature){
-  const p = feature.properties;
-  let color = BRAND;
-  let weight = p.has_italian_owner ? 3.8 : 2.2;
-  let opacity = 0.8;
-  let dashArray = null;
-
-  if (['construction','proposed'].includes(p.status_cat)) color = BRAND_SOFT;
-  if (['cancelled','retired','idle','mothballed','shelved'].includes(p.status_cat)) {
-    color = BRAND_PALE;
-    dashArray = '8 6';
-    opacity = 0.9;
-  }
-  if (p.fuel_cat === 'ngl') dashArray = dashArray || '2 6';
-  if (p.fuel_cat === 'oil_ngl') dashArray = dashArray || '10 5 2 5';
-
-  return { color, weight, opacity, dashArray };
-}
-
-function pointStyle(feature){
-  const p = feature.properties;
-  let fillColor = BRAND;
-  if (['gas','gas_condensate','oil_gas'].includes(p.fuel_cat)) fillColor = BRAND_SOFT;
-  if (p.fuel_cat === 'oil_gas') fillColor = '#ad394a';
-  const italian = !!p.is_italian_operator;
-  return {
-    radius: italian ? 6 : 4,
-    fillColor,
-    color: italian ? GOLD : BRAND_DARK,
-    weight: italian ? 2 : 0.8,
-    opacity: 1,
-    fillOpacity: 0.85
-  };
-}
-
-function normalize(v){
-  return (v || '').toString().trim().toLowerCase();
-}
-
-function matchesFilters(props, isPipeline){
-  const fuel = normalize(ui.fuelFilter.value);
-  const status = normalize(ui.statusFilter.value);
-  const country = normalize(ui.countrySearch.value);
-  const italianOnly = ui.italianOnly.checked;
-
-  if (fuel !== 'all' && normalize(props.fuel_cat) !== fuel) return false;
-  if (status !== 'all' && normalize(props.status_cat) !== status) return false;
-
-  if (country){
-    const haystack = isPipeline
-      ? [props.countries, props.start_country, props.end_country].join(' ').toLowerCase()
-      : [props.country, props.subnational].join(' ').toLowerCase();
-    if (!haystack.includes(country)) return false;
-  }
-
-  if (italianOnly){
-    if (isPipeline && !props.has_italian_owner) return false;
-    if (!isPipeline && !props.is_italian_operator) return false;
-  }
-
-  return true;
-}
-
-function pipelinePopup(props){
-  const ownership = props.owner_summary ? `<strong>Ownership:</strong> ${props.owner_summary}<br>` : '';
-  const italian = props.has_italian_owner ? `<strong>Presenza italiana:</strong> ${props.italian_owner_names || 'Sì'}<br>` : '';
-  const length = props.length_km ? `<strong>Lunghezza:</strong> ${Number(props.length_km).toLocaleString('it-IT')} km<br>` : '';
-  const cap = props.capacity ? `<strong>Capacità:</strong> ${props.capacity} ${props.capacity_units || ''}<br>` : '';
-  const wiki = props.wiki ? `<a href="${props.wiki}" target="_blank" rel="noopener noreferrer">Scheda GEM</a>` : '';
-  return `
-    <div class="popup-title">${props.name}</div>
-    <div class="popup-meta">
-      <strong>Tipo:</strong> ${props.fuel || 'n.d.'}<br>
-      <strong>Stato:</strong> ${props.status || 'n.d.'}<br>
-      <strong>Paesi:</strong> ${props.countries || 'n.d.'}<br>
-      ${length}
-      ${cap}
-      ${ownership}
-      ${italian}
-      ${wiki}
-    </div>
-  `;
-}
-
-function pointPopup(props){
-  const prod = props.production_value ? `<strong>Produzione:</strong> ${Number(props.production_value).toLocaleString('it-IT')} ${props.production_unit || ''}${props.production_year ? ' ('+props.production_year+')' : ''}<br>` : '';
-  const operator = props.operator ? `<strong>Operatore:</strong> ${props.operator}<br>` : '';
-  const owners = props.owners_text ? `<strong>Owner(s):</strong> ${props.owners_text}<br>` : '';
-  const italian = props.is_italian_operator ? `<strong>Presenza italiana:</strong> operatore italiano evidenziato<br>` : '';
-  return `
-    <div class="popup-title">${props.name}</div>
-    <div class="popup-meta">
-      <strong>Tipo:</strong> ${props.fuel || 'n.d.'}<br>
-      <strong>Stato:</strong> ${props.status || 'n.d.'}<br>
-      <strong>Paese:</strong> ${props.country || 'n.d.'}<br>
-      ${operator}
-      ${owners}
-      ${prod}
-      ${italian}
-    </div>
-  `;
-}
-
-function renderLayers(){
-  if (pipelineLayer) map.removeLayer(pipelineLayer);
-  if (pointLayer) map.removeLayer(pointLayer);
-
-  let pipelineVisibleCount = 0;
-  let pointVisibleCount = 0;
-
-  if (pipelinesRaw && ui.togglePipelines.checked){
-    pipelineLayer = L.geoJSON(pipelinesRaw, {
-      filter: f => {
-        const ok = matchesFilters(f.properties, true);
-        if (ok) pipelineVisibleCount++;
-        return ok;
-      },
-      style: stylePipeline,
-      onEachFeature: (feature, layer) => layer.bindPopup(pipelinePopup(feature.properties))
-    }).addTo(map);
-  }
-
-  if (pointsRaw && ui.toggleExtraction.checked){
-    pointLayer = L.markerClusterGroup({
-      showCoverageOnHover:false,
-      spiderfyOnMaxZoom:true,
-      chunkedLoading:true,
-      maxClusterRadius: 45
-    });
-
-    const pointsGeo = L.geoJSON(pointsRaw, {
-      filter: f => {
-        const ok = matchesFilters(f.properties, false);
-        if (ok) pointVisibleCount++;
-        return ok;
-      },
-      pointToLayer: (feature, latlng) => L.circleMarker(latlng, pointStyle(feature)),
-      onEachFeature: (feature, layer) => layer.bindPopup(pointPopup(feature.properties))
-    });
-
-    pointLayer.addLayer(pointsGeo);
-    map.addLayer(pointLayer);
-  }
-
-  ui.pipelineCount.textContent = pipelineVisibleCount.toLocaleString('it-IT');
-  ui.pointCount.textContent = pointVisibleCount.toLocaleString('it-IT');
-}
-
-
-const modalOverlay = document.getElementById('modalOverlay');
-const modalTitle = document.getElementById('modalTitle');
-const modalBody = document.getElementById('modalBody');
-const modalClose = document.getElementById('modalClose');
-
-const modalContent = {
-  embed: {
-    title: 'Embed',
-    body: `
-      <p>Per incorporare la mappa in un altro sito, copia questo codice iframe.</p>
-      <textarea class="embed-textarea" id="embedTextarea" readonly></textarea>
-      <button type="button" class="secondary" id="copyEmbedBtn">Copia codice</button>
-      <div class="copy-status" id="copyStatus"></div>
-    `
-  },
-  method: {
-    title: 'Nota metodologica',
-    body: `
-      <p>La mappa è stata realizzata a partire da dataset pubblici e rielaborazioni giornalistiche, unendo diverse basi dati relative a pipeline e siti di estrazione.</p>
-      <p>Per l’analisi, il merge dei dati e il controllo della visualizzazione interattiva sono stati utilizzati anche strumenti di supporto basati su intelligenza artificiale.</p>
-      <p>La validazione finale dei contenuti e delle scelte editoriali è a cura della redazione.</p>
-    `
-  },
-  credits: {
-    title: 'Credits',
-    body: `
-      <p><strong>Mappa realizzata da Antonio Massariolo per Il Bo Live.</strong></p>
-      <p>Fonte dati principale: Global Energy Monitor.</p>
-      <p>Licenza della visualizzazione: Creative Commons Attribution 4.0 International License.</p>
-    `
-  }
-};
-
-function buildEmbedCode(){
-  return '<iframe src="' + window.location.href + '" width="100%" height="700" frameborder="0" loading="lazy"></iframe>';
-}
-
-function openModal(kind){
-  const cfg = modalContent[kind];
-  if (!cfg) return;
-  modalTitle.textContent = cfg.title;
-  modalBody.innerHTML = cfg.body;
-  modalOverlay.classList.add('open');
-  modalOverlay.setAttribute('aria-hidden', 'false');
-
-  if (kind === 'embed'){
-    const textarea = document.getElementById('embedTextarea');
-    const copyBtn = document.getElementById('copyEmbedBtn');
-    const copyStatus = document.getElementById('copyStatus');
-    textarea.value = buildEmbedCode();
-    copyBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(textarea.value);
-        copyStatus.textContent = 'Codice copiato.';
-      } catch (e) {
-        textarea.focus();
-        textarea.select();
-        copyStatus.textContent = 'Se la copia automatica non funziona, seleziona e copia manualmente.';
+      #map-wrap{
+        position:relative;
+        height:430px;
       }
-    }, { once: true });
-  }
-}
+      #map{
+        position:absolute;
+        inset:0;
+        height:100%;
+      }
+    }
 
-function closeModal(){
-  modalOverlay.classList.remove('open');
-  modalOverlay.setAttribute('aria-hidden', 'true');
-  modalBody.innerHTML = '';
-}
-
-document.querySelectorAll('[data-modal]').forEach(btn => {
-  btn.addEventListener('click', () => openModal(btn.dataset.modal));
-});
-
-modalClose.addEventListener('click', closeModal);
-modalOverlay.addEventListener('click', (e) => {
-  if (e.target === modalOverlay) closeModal();
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && modalOverlay.classList.contains('open')) closeModal();
-});
-
-
-Promise.all([
-  fetch('final_pipelines_enriched.geojson').then(r => r.json()),
-  fetch('final_extraction_points.geojson').then(r => r.json())
-]).then(([pipelines, points]) => {
-  pipelinesRaw = pipelines;
-  pointsRaw = points;
-  renderLayers();
-  setTimeout(() => {
-    map.invalidateSize();
-  }, 200);
-}).catch(err => {
-  console.error(err);
-  alert('Impossibile caricare i file GeoJSON. Controlla che index.html e i file dati siano nella stessa cartella.');
-});
-
-ui.applyBtn.addEventListener('click', renderLayers);
-ui.resetBtn.addEventListener('click', () => {
-  ui.togglePipelines.checked = true;
-  ui.toggleExtraction.checked = true;
-  ui.fuelFilter.value = 'all';
-  ui.statusFilter.value = 'all';
-  ui.countrySearch.value = '';
-  ui.italianOnly.checked = false;
-  renderLayers();
-});
-ui.togglePipelines.addEventListener('change', renderLayers);
-ui.toggleExtraction.addEventListener('change', renderLayers);
-</script>
-</body>
-</html>
 
