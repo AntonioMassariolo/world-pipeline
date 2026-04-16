@@ -162,8 +162,8 @@
       </div>
       <div class="control-row">
         <label for="countrySearch">Paese</label>
-        <input type="text" id="countrySearch" placeholder="Es. Italy, Kazakhstan, Iraq">
-      </div>
+<input type="text" id="countrySearch" list="countryList" placeholder="Es. Italy, Kazakhstan, Iraq">
+<datalist id="countryList"></datalist>      </div>
       <div class="control-row">
         <label><input type="checkbox" id="italianOnly"> Solo asset con aziende italiane / operatori italiani</label>
       </div>
@@ -292,6 +292,35 @@ function pointStyle(feature){
 
 function normalize(v){
   return (v || '').toString().trim().toLowerCase();
+}
+  function populateCountryList(){
+  const datalist = document.getElementById('countryList');
+  if (!datalist) return;
+
+  const countries = new Set();
+
+  if (pipelinesRaw && pipelinesRaw.features) {
+    pipelinesRaw.features.forEach(f => {
+      const p = f.properties || {};
+      [p.countries, p.start_country, p.end_country].forEach(value => {
+        if (!value) return;
+        value.toString().split(',').forEach(part => {
+          const country = part.trim();
+          if (country) countries.add(country);
+        });
+      });
+    });
+  }
+
+  if (pointsRaw && pointsRaw.features) {
+    pointsRaw.features.forEach(f => {
+      const p = f.properties || {};
+      if (p.country) countries.add(p.country.toString().trim());
+    });
+  }
+
+  const sorted = Array.from(countries).sort((a, b) => a.localeCompare(b));
+  datalist.innerHTML = sorted.map(country => `<option value="${country}">`).join('');
 }
 
 function matchesFilters(props, isPipeline){
@@ -492,8 +521,9 @@ Promise.all([
 ]).then(([pipelines, points]) => {
   pipelinesRaw = pipelines;
   pointsRaw = points;
+  populateCountryList();
   renderLayers();
-}).catch(err => {
+}).catch(err => { {
   console.error(err);
   alert('Impossibile caricare i file GeoJSON. Controlla che index.html e i file dati siano nella stessa cartella.');
 });
